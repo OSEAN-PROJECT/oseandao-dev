@@ -18,7 +18,7 @@ import "@thirdweb-dev/contracts/eip/interface/IERC20Metadata.sol";
 
 import "@thirdweb-dev/contracts/extension/ContractMetadata.sol";
 import "@thirdweb-dev/contracts/extension/PermissionsEnumerable.sol";
-import { Staking20Upgradeable } from "./extensions/OseanStaking20Upgradeable.sol";
+import { Staking20Upgradeable } from "./extensions/OseanSkipperStaking20Upgradeable.sol";
 import "@thirdweb-dev/contracts/prebuilts/interface/staking/ITokenStake.sol";
 
 contract OseanSkipperStake is

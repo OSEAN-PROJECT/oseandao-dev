@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.11;
 
-/// @author OSEAN DAO based on Thirdweb TokenStake for ERC20
+// OSEAN DAO staking contract for OSEAN SKIPPER HOLDERS based on Thirdweb Staking20
 
 // Token
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -18,10 +18,10 @@ import "@thirdweb-dev/contracts/eip/interface/IERC20Metadata.sol";
 
 import "@thirdweb-dev/contracts/extension/ContractMetadata.sol";
 import "@thirdweb-dev/contracts/extension/PermissionsEnumerable.sol";
-import { Staking20Upgradeable } from "@thirdweb-dev/contracts/extension/Staking20Upgradeable.sol";
-import "@thirdweb-dev/contracts/interface/staking/ITokenStake.sol";
+import { Staking20Upgradeable } from "./extensions/OseanStaking20Upgradeable.sol";
+import "@thirdweb-dev/contracts/prebuilts/interface/staking/ITokenStake.sol";
 
-contract TokenStake is
+contract OseanSkipperStake is
     Initializable,
     ContractMetadata,
     PermissionsEnumerable,
@@ -38,8 +38,36 @@ contract TokenStake is
 
     /// @dev Total amount of reward tokens in the contract.
     uint256 private rewardTokenBalance;
+    
+    constructor(
+        address _nativeTokenWrapper,
+        string memory _contractURI,
+        address[] memory _trustedForwarders,
+        address _rewardToken,
+        address _stakingToken,
+        uint80 _timeUnit,
+        uint256 _rewardRatioNumerator,
+        uint256 _rewardRatioDenominator
+    ) initializer Staking20Upgradeable(_nativeTokenWrapper) {
+        // Set contract parameters directly in the constructor
+        __ERC2771Context_init_unchained(_trustedForwarders);        
 
-    constructor(address _nativeTokenWrapper) initializer Staking20Upgradeable(_nativeTokenWrapper) {}
+        require(_rewardToken != _stakingToken, "Reward Token and Staking Token can't be same.");
+        rewardToken = _rewardToken;
+
+        uint16 _stakingTokenDecimals = _stakingToken == CurrencyTransferLib.NATIVE_TOKEN
+            ? 18
+            : IERC20Metadata(_stakingToken).decimals();
+        uint16 _rewardTokenDecimals = _rewardToken == CurrencyTransferLib.NATIVE_TOKEN
+            ? 18
+            : IERC20Metadata(_rewardToken).decimals();
+
+        __Staking20_init(_stakingToken, _stakingTokenDecimals, _rewardTokenDecimals);
+        _setStakingCondition(_timeUnit, _rewardRatioNumerator, _rewardRatioDenominator);
+
+        _setupContractURI(_contractURI);
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
 
     /// @dev Initializes the contract, like a constructor.
     function initialize(
@@ -52,7 +80,7 @@ contract TokenStake is
         uint256 _rewardRatioNumerator,
         uint256 _rewardRatioDenominator
     ) external initializer {
-        __ERC2771Context_init_unchained(_trustedForwarders);
+        __ERC2771Context_init_unchained(_trustedForwarders);        
 
         require(_rewardToken != _stakingToken, "Reward Token and Staking Token can't be same.");
         rewardToken = _rewardToken;
@@ -171,7 +199,7 @@ contract TokenStake is
     /*///////////////////////////////////////////////////////////////
                             Miscellaneous
     //////////////////////////////////////////////////////////////*/
-
+    
     function _stakeMsgSender() internal view virtual override returns (address) {
         return _msgSender();
     }
