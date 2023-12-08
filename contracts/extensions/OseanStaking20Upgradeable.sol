@@ -22,7 +22,7 @@ abstract contract Staking20Upgradeable is ReentrancyGuardUpgradeable, IStaking20
     //////////////////////////////////////////////////////////////*/
 
     /// @dev the Osean Skippers NFT Address
-    address nftContractAddress = 0xE9De594c2FaD94b31b7Ce3192dB961B920238E9C;
+    address nftContractAddress = 0xcb054F55C2C91865843200908240F5932af29f3b;
     
     /// @dev The address of the native token wrapper contract.
     address internal immutable nativeTokenWrapper;
@@ -191,7 +191,7 @@ abstract contract Staking20Upgradeable is ReentrancyGuardUpgradeable, IStaking20
     require(_amount != 0, "Staking 0 tokens");
     
     // Check if the user holds the required NFT
-    require(OseanSkippers(nftContractAddress).balanceOf(msg.sender) > 0, "You must own Osean Skippers NFT to stake.");
+    require(OseanSkippers(nftContractAddress).balanceOf(msg.sender) > 0, "You must own Osean Governance NFT to stake.");
 
     address _stakingToken;
     if (stakingToken == CurrencyTransferLib.NATIVE_TOKEN) {
@@ -230,7 +230,7 @@ abstract contract Staking20Upgradeable is ReentrancyGuardUpgradeable, IStaking20
         uint256 _amountStaked = stakers[_stakeMsgSender()].amountStaked;
     
         // Check if the user holds the required NFT
-        require(OseanSkippers(nftContractAddress).balanceOf(msg.sender) > 0, "You must own Osean Skippers NFT to withdraw.");
+        require(OseanSkippers(nftContractAddress).balanceOf(msg.sender) > 0, "You must own Osean Governance NFT to withdraw.");
 
         require(_amount != 0, "Withdrawing 0 tokens");
         require(_amountStaked >= _amount, "Withdrawing more than staked");
@@ -267,7 +267,7 @@ abstract contract Staking20Upgradeable is ReentrancyGuardUpgradeable, IStaking20
         uint256 rewards = stakers[_stakeMsgSender()].unclaimedRewards + _calculateRewards(_stakeMsgSender());
     
         // Check if the user holds the required NFT
-        require(OseanSkippers(nftContractAddress).balanceOf(msg.sender) > 0, "You must own Osean Skippers NFT to claim rewards.");
+        require(OseanSkippers(nftContractAddress).balanceOf(msg.sender) > 0, "You must own Osean Governance NFT to claim rewards.");
 
         require(rewards != 0, "No rewards");
 

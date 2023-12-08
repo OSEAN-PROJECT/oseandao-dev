@@ -22,7 +22,7 @@ abstract contract Staking20Upgradeable is ReentrancyGuardUpgradeable, IStaking20
     //////////////////////////////////////////////////////////////*/
 
     /// @dev the Osean Skippers NFT Address
-    address nftContractAddress = 0xE9De594c2FaD94b31b7Ce3192dB961B920238E9C;
+    address nftContractAddress = 0x30ccb40b54cc0A2fF1E0be8C0fCe4301389596BB;
     
     /// @dev The address of the native token wrapper contract.
     address internal immutable nativeTokenWrapper;
