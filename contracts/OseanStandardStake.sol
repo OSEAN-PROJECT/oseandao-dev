@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.11;
 
-// OSEAN DAO staking contract for OSEAN DAO Governance Holders based on Thirdweb Staking20
+// OSEAN DAO staking contract based on Thirdweb Staking20
 
 // Token
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -18,10 +18,10 @@ import "@thirdweb-dev/contracts/eip/interface/IERC20Metadata.sol";
 
 import "@thirdweb-dev/contracts/extension/ContractMetadata.sol";
 import "@thirdweb-dev/contracts/extension/PermissionsEnumerable.sol";
-import { Staking20Upgradeable } from "./extensions/OseanStaking20Upgradeable.sol";
+import { Staking20Upgradeable } from "@thirdweb-dev/contracts/extension/Staking20Upgradeable.sol";
 import "@thirdweb-dev/contracts/prebuilts/interface/staking/ITokenStake.sol";
 
-contract OseanStake is
+contract OseanStandardStake is
     Initializable,
     ContractMetadata,
     PermissionsEnumerable,
