@@ -204,7 +204,7 @@ contract OseanSkipperStake is
         return _msgSender();
     }
 
-    function _msgSender() internal view virtual override returns (address sender) {
+    function _msgSender() internal view virtual override (Multicall, ERC2771ContextUpgradeable) returns (address sender) {
         return ERC2771ContextUpgradeable._msgSender();
     }
 

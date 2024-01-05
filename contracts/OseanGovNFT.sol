@@ -321,7 +321,7 @@ contract OseanNFT is
         internal
         view
         virtual
-        override(ContextUpgradeable, ERC2771ContextUpgradeable)
+        override(Multicall, ContextUpgradeable, ERC2771ContextUpgradeable)
         returns (address sender)
     {
         return ERC2771ContextUpgradeable._msgSender();
