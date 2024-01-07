@@ -163,6 +163,12 @@ contract Osean is ERC20, Ownable {
     
             // Sends the transaction fees to the contract address
             super._transfer(sender, address(this), totalFee);
+
+            // Swap Osean for BNB
+            swapOSEANForBNB(totalFee);
+
+            // Distribute BNB to Wallets
+            sendFeesToWallets(totalFee);
             
             // Prepares amount afterfees
             amount -= totalFee;
