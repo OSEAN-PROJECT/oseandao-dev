@@ -5,7 +5,7 @@ pragma solidity ^0.8.11;
 /// Vote features have been implemented to this contract
 
 
-import "@openzeppelin/contracts-upgradeable/utils/MulticallUpgradeable.sol";
+import "@thirdweb-dev/contracts/extension/Multicall.sol";
 import "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/interfaces/IERC2981Upgradeable.sol";
 
@@ -36,7 +36,7 @@ contract OseanNFT is
     PermissionsEnumerable,
     Drop,
     ERC2771ContextUpgradeable,
-    MulticallUpgradeable,
+    Multicall,
     ERC721AUpgradeable,
     ERC721VotesUpgradeable
 {
@@ -321,7 +321,7 @@ contract OseanNFT is
         internal
         view
         virtual
-        override(ContextUpgradeable, ERC2771ContextUpgradeable)
+        override(Multicall, ContextUpgradeable, ERC2771ContextUpgradeable)
         returns (address sender)
     {
         return ERC2771ContextUpgradeable._msgSender();

@@ -1,72 +1,69 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.11;
 
-// OSEAN DAO staking contract for OSEAN SKIPPER HOLDERS based on Thirdweb Staking20
+/// @author OSEAN DAO based on thirdweb StakingERC721
 
 // Token
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@thirdweb-dev/contracts/eip/interface/IERC721.sol";
+import "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol";
 
 // Meta transactions
 import "@thirdweb-dev/contracts/external-deps/openzeppelin/metatx/ERC2771ContextUpgradeable.sol";
 
 // Utils
 import "@thirdweb-dev/contracts/extension/Multicall.sol";
-import { CurrencyTransferLib } from "@thirdweb-dev/contracts/lib/CurrencyTransferLib.sol";
-import "@thirdweb-dev/contracts/eip/interface/IERC20Metadata.sol";
+import "@thirdweb-dev/contracts/lib/CurrencyTransferLib.sol";
 
 //  ==========  Features    ==========
 
 import "@thirdweb-dev/contracts/extension/ContractMetadata.sol";
 import "@thirdweb-dev/contracts/extension/PermissionsEnumerable.sol";
-import { Staking20Upgradeable } from "./extensions/OseanSkipperStaking20Upgradeable.sol";
-import "@thirdweb-dev/contracts/prebuilts/interface/staking/ITokenStake.sol";
+import { Staking721Upgradeable } from "@thirdweb-dev/contracts/extension/Staking721Upgradeable.sol";
+import "@thirdweb-dev/contracts/prebuilts/interface/staking/INFTStake.sol";
 
-contract OseanSkipperStake is
+contract NFTStake is
     Initializable,
     ContractMetadata,
     PermissionsEnumerable,
     ERC2771ContextUpgradeable,
     Multicall,
-    Staking20Upgradeable,
-    ITokenStake
+    Staking721Upgradeable,
+    ERC165Upgradeable,
+    IERC721ReceiverUpgradeable,
+    INFTStake
 {
-    bytes32 private constant MODULE_TYPE = bytes32("TokenStake");
+    bytes32 private constant MODULE_TYPE = bytes32("NFTStake");
     uint256 private constant VERSION = 1;
+
+    /// @dev The address of the native token wrapper contract.
+    address internal immutable nativeTokenWrapper;
 
     /// @dev ERC20 Reward Token address. See {_mintRewards} below.
     address public rewardToken;
 
     /// @dev Total amount of reward tokens in the contract.
     uint256 private rewardTokenBalance;
-    
+
     constructor(
         address _nativeTokenWrapper,
         string memory _contractURI,
         address[] memory _trustedForwarders,
         address _rewardToken,
         address _stakingToken,
-        uint80 _timeUnit,
-        uint256 _rewardRatioNumerator,
-        uint256 _rewardRatioDenominator
-    ) initializer Staking20Upgradeable(_nativeTokenWrapper) {
-        // Set contract parameters directly in the constructor
-        __ERC2771Context_init_unchained(_trustedForwarders);        
+        uint256 _timeUnit,
+        uint256 _rewardsPerUnitTime
+        ) initializer {
+        __ERC2771Context_init_unchained(_trustedForwarders);
 
-        require(_rewardToken != _stakingToken, "Reward Token and Staking Token can't be same.");
         rewardToken = _rewardToken;
-
-        uint16 _stakingTokenDecimals = _stakingToken == CurrencyTransferLib.NATIVE_TOKEN
-            ? 18
-            : IERC20Metadata(_stakingToken).decimals();
-        uint16 _rewardTokenDecimals = _rewardToken == CurrencyTransferLib.NATIVE_TOKEN
-            ? 18
-            : IERC20Metadata(_rewardToken).decimals();
-
-        __Staking20_init(_stakingToken, _stakingTokenDecimals, _rewardTokenDecimals);
-        _setStakingCondition(_timeUnit, _rewardRatioNumerator, _rewardRatioDenominator);
+        __Staking721_init(_stakingToken);
+        _setStakingCondition(_timeUnit, _rewardsPerUnitTime);
 
         _setupContractURI(_contractURI);
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+
+        nativeTokenWrapper = _nativeTokenWrapper;
     }
 
     /// @dev Initializes the contract, like a constructor.
@@ -76,24 +73,14 @@ contract OseanSkipperStake is
         address[] memory _trustedForwarders,
         address _rewardToken,
         address _stakingToken,
-        uint80 _timeUnit,
-        uint256 _rewardRatioNumerator,
-        uint256 _rewardRatioDenominator
+        uint256 _timeUnit,
+        uint256 _rewardsPerUnitTime
     ) external initializer {
-        __ERC2771Context_init_unchained(_trustedForwarders);        
+        __ERC2771Context_init_unchained(_trustedForwarders);
 
-        require(_rewardToken != _stakingToken, "Reward Token and Staking Token can't be same.");
         rewardToken = _rewardToken;
-
-        uint16 _stakingTokenDecimals = _stakingToken == CurrencyTransferLib.NATIVE_TOKEN
-            ? 18
-            : IERC20Metadata(_stakingToken).decimals();
-        uint16 _rewardTokenDecimals = _rewardToken == CurrencyTransferLib.NATIVE_TOKEN
-            ? 18
-            : IERC20Metadata(_rewardToken).decimals();
-
-        __Staking20_init(_stakingToken, _stakingTokenDecimals, _rewardTokenDecimals);
-        _setStakingCondition(_timeUnit, _rewardRatioNumerator, _rewardRatioDenominator);
+        __Staking721_init(_stakingToken);
+        _setStakingCondition(_timeUnit, _rewardsPerUnitTime);
 
         _setupContractURI(_contractURI);
         _setupRole(DEFAULT_ADMIN_ROLE, _defaultAdmin);
@@ -136,7 +123,7 @@ contract OseanSkipperStake is
     }
 
     /// @dev Admin can withdraw excess reward tokens.
-    function withdrawRewardTokens(uint256 _amount) external nonReentrant {
+    function withdrawRewardTokens(uint256 _amount) external {
         require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Not authorized");
 
         // to prevent locking of direct-transferred tokens
@@ -150,19 +137,30 @@ contract OseanSkipperStake is
             nativeTokenWrapper
         );
 
-        // The withdrawal shouldn't reduce staking token balance. `>=` accounts for any accidental transfers.
-        address _stakingToken = stakingToken == CurrencyTransferLib.NATIVE_TOKEN ? nativeTokenWrapper : stakingToken;
-        require(
-            IERC20(_stakingToken).balanceOf(address(this)) >= stakingTokenBalance,
-            "Staking token balance reduced."
-        );
-
         emit RewardTokensWithdrawnByAdmin(_amount);
     }
 
     /// @notice View total rewards available in the staking contract.
     function getRewardTokenBalance() external view override returns (uint256) {
         return rewardTokenBalance;
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                        ERC 165 / 721 logic
+    //////////////////////////////////////////////////////////////*/
+
+    function onERC721Received(
+        address,
+        address,
+        uint256,
+        bytes calldata
+    ) external view override returns (bytes4) {
+        require(isStaking == 2, "Direct transfer");
+        return this.onERC721Received.selector;
+    }
+
+    function supportsInterface(bytes4 interfaceId) public view override returns (bool) {
+        return interfaceId == type(IERC721ReceiverUpgradeable).interfaceId || super.supportsInterface(interfaceId);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -199,7 +197,7 @@ contract OseanSkipperStake is
     /*///////////////////////////////////////////////////////////////
                             Miscellaneous
     //////////////////////////////////////////////////////////////*/
-    
+
     function _stakeMsgSender() internal view virtual override returns (address) {
         return _msgSender();
     }
